@@ -1,3 +1,4 @@
 shangdiy@shangdiy-ThinkPad-X1-Carbon-7th:~/gbbs$ bazel run //benchmarks/BFS/NonDeterministicBFS:BFS_main -- -s ~/gbbs/inputs/rMatGraph_J_5_100 
 
-
+build --cxxopt=-DSERIAL 
+(previously it's homegrown) 
