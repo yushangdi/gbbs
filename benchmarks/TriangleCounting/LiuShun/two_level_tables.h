@@ -79,7 +79,7 @@ class nested_table {
         // Overfilling the table could put it into an infinite loop.
         nested_table(size_t _m, BT _empty, KeyHash _key_hash, long inp_space_mult=-1)
         {
-            T top_empty = std::make_tuple( std::get<0>(_empty), sparse_table<K,BV,KeyHash>());
+            T top_empty = std::make_tuple( std::get<0>(_empty), sparse_table<K,BV,KeyHash>(_m, _empty, _key_hash));
             top_table = sparse_table<K,V,KeyHash>(_m, top_empty, _key_hash, inp_space_mult);
             table = top_table.table;
             empty_key = top_table.empty_key;
@@ -89,7 +89,7 @@ class nested_table {
         // Overfilling the table could put it into an infinite loop.
         nested_table(size_t _m, BT _empty, KeyHash _key_hash, T* _tab, bool clear=true)
         {
-            T top_empty = std::make_tuple( std::get<0>(_empty), sparse_table<K,BV,KeyHash>());
+            T top_empty = std::make_tuple( std::get<0>(_empty), sparse_table<K,BV,KeyHash>(_m, _empty, _key_hash));
             top_table = sparse_table<K,V,KeyHash>(_m, top_empty, _key_hash, _tab, clear);
             empty_key = top_table.empty_key;
             table = top_table.table;
@@ -116,14 +116,19 @@ class nested_table {
         //     size_t h = firstIndex(k);
         //     while (true) {
         //     if (std::get<0>(table[h]) == empty_key) {
+        //         cout << 1 << endl;
         //         if (pbbslib::CAS(&std::get<0>(table[h]), empty_key, k)) {
         // //          std::get<1>(table[h]) = std::get<1>(kv);
-        //         std::get<1>(table[h]).insert(make_tuple(k2,v));
+        //         cout << 3 << endl;
+        //         std::get<1>(table[h]).insert(std::make_tuple(k2,v));
+        //         cout << 4 << endl;
         //         return true;
         //         }
         //     }
         //     if (std::get<0>(table[h]) == k) {
-        //         f(&std::get<1>(table[h]), kv);
+        //         cout << 2 << endl;
+        //         // f(&std::get<1>(table[h]), kv);
+        //         std::get<1>(table[h]).insert(std::make_tuple(k2,v));
         //         return false;
         //     }
         //     h = incrementIndex(h);

@@ -244,8 +244,13 @@ inline auto test(Graph& G){
   BT empty = std::make_tuple(UINT_E_MAX, -1);
 
   auto HH = NestHash::nested_table<K, V, hash_vertex>(n, empty, hash_vertex());
+  cout << "constructed" << endl;
   HH.insert(1, 2, 3);
+  cout << "inserted" << endl;
+
   auto low = HH.find(1, HH.empty_val);
+  cout << "found table" << endl;
+
   low.insert(make_tuple(3, 4));
   V v = HH.find(1,3,0);
   cout << v << endl;
@@ -257,7 +262,7 @@ inline auto test(Graph& G){
 template <class Graph, class F>
 inline size_t Triangle(Graph& G, const F& f, commandLine& P) {
   auto C0 = P.getOptionIntValue("-c", 0);
-  test(G);
+  // test(G);
 
   // auto state = Initialize<Graph>(G);
 
