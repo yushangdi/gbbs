@@ -40,22 +40,22 @@ using namespace std;
 #define NEW_INSERTION 1
 #define NEW_DELETION 2
 
-inline std::tuple<std::pair<uintE, uintE>, int8_t> newKV(uintE s, uintE d, int8_t v){
-  return make_tuple(make_pair(s,d), v);
-}
+// inline std::tuple<std::pair<uintE, uintE>, int8_t> newKV(uintE s, uintE d, int8_t v){
+//   return make_tuple(make_pair(s,d), v);
+// }
 
-inline std::tuple<std::pair<uintE, uintE>, size_t> newKV(uintE s, uintE d, size_t v){
-  return make_tuple(make_pair(s,d), v);
-}
+// inline std::tuple<std::pair<uintE, uintE>, size_t> newKV(uintE s, uintE d, size_t v){
+//   return make_tuple(make_pair(s,d), v);
+// }
 
-struct hash_pair {
-  inline size_t operator () (const std::tuple<uintE, uintE>& t) {
-    size_t l = std::min(std::get<0>(t), std::get<1>(t));
-    size_t r = std::max(std::get<0>(t), std::get<1>(t));
-    size_t key = (l << 32) + r;
-    return pbbslib::hash64_2(key);
-  }
-};
+// struct hash_pair {
+//   inline size_t operator () (const std::tuple<uintE, uintE>& t) {
+//     size_t l = std::min(std::get<0>(t), std::get<1>(t));
+//     size_t r = std::max(std::get<0>(t), std::get<1>(t));
+//     size_t key = (l << 32) + r;
+//     return pbbslib::hash64_2(key);
+//   }
+// };
 
 struct hash_vertex {
   inline size_t operator () (const uintE t) {
@@ -66,9 +66,11 @@ struct hash_vertex {
 
 template <class Graph, class E, class F>
 struct BPDTriangleCountState {
-  using K = std::pair<uintE, uintE>;
-  using V = int8_t;
-  using KV = std::tuple<K, V>;
+  using K = uintE;
+  using BV = int8_t;
+  using BT = std::tuple<K, BV>;
+  using V = sparse_table<K, BV, KeyHash>; // top value
+  using T = std::tuple<K, V>; // top key value pair
 
   // initialize tables assuming state.D is already initialized
   // use D to determine the low/high of vertices
@@ -131,13 +133,21 @@ struct BPDTriangleCountState {
 
     D = pbbs::sequence<uintE>(n, [&] (size_t i) { return G.get_vertex(i).getOutDegree(); });
     edgeMap(G, Frontier, updateTablesF());
-    // for(std::tuple<K, size_t> kv : HH.entries()){
-    //   vhigh = std::get<0>(kv).first;
-    //   vlow  = std::get<0>(kv).second;
-    //   size_t deg = G.get_vertex(v_low).getOutDegree();
-    //   // auto neigh_vlow = vertexSubset(deg, deg, G.get_vertex(v_low).getOutNeighbors());
+    for(T kv : HL.entries()){ // loop over keys?
+      K vhigh = std::get<0>(kv);
+      BV table = std::get<1>(kv);
+      for(BT kv2 : table.entries()){
+        K vlow  = std::get<0>(kv2);
+        V table2 = LH.find(vlow, LH.empty_val);
 
-    // }
+        for(BT kv3 : table2.entries()){
+          K vhigh2 = std::get<0>(kv);
+          add_to_T(vhigh, vhigh2, 1);
+          add_to_T(vhigh2, vhigh, 1);
+        }
+
+      }
+    }
   }
 
 
@@ -158,72 +168,39 @@ struct BPDTriangleCountState {
     bool highS = is_high(s);
     bool highD = is_high(d);
     if( highS && highD){ //HH
-      HH.insert(newKV(s,d,V));
+      HH.insert(s,d,V);
     }else if(highS){ //HL
-      HL.insert(newKV(s,d,V));
+      HL.insert(s,d,V);
     }else if(highD){ //LH
-      LH.insert(newKV(s,d,V));
+      LH.insert(s,d,V);
     }else{ //LL
-      LL.insert(newKV(s,d,V));
+      LL.insert(s,d,V);
     }
   }
 
-  // inline void add_to_T(uintE s, uintE d, size_t V){
-  //   T.insert_f<updateTF>(newKV(s,d,V), updateTF());
-  // }
+  inline void add_to_T(uintE s, uintE d, size_t V){
+    T.insert_f(s,d,V, updateTF());
+  }
 
 
 
 };
 
 
-// // initialize tables assuming state.D is already initialized
-// // use D to determine the low/high of vertices
-// template <class Graph, class E, class F>
-// struct updateTablesF {
-//   Graph& G;
-//   BPDTriangleCountState<Graph, E, F>& state;
-//   updateTablesF(Graph& G, BPDTriangleCountState<Graph, E, F>& _state) : G(G), state(_state) {}
-
-//   inline bool update(uintE s, uintE d) {// (1,2) (2,1) will be called twice?
-//   // can add condition s < d and add both edges in one call
-//     bool highS = state.is_high(s);
-//     bool highD = state.is_high(d);
-//     if( highS && highD){ //HH
-//       state.HH.insert(newKV(s,d,OLD_EDGE));
-//     }else if(highS){ //HL
-//       state.HL.insert(newKV(s,d,OLD_EDGE));
-//     }else if(highD){ //LH
-//       state.LH.insert(newKV(s,d,OLD_EDGE));
-//     }else{ //LL
-//       state.LL.insert(newKV(s,d,OLD_EDGE));
-//     }
-//     return 1;
-//   }// when to return false?
-
-//   inline bool updateAtomic(uintE s, uintE d) {
-//     update(s,d);
-//     return 1;
-//   }
-
-//   inline bool cond(uintE d) { return cond_true(d); }
-// };
-
-
 template <class Graph>
 inline auto Initialize(Graph& G){
-  using K = std::pair<uintE, uintE>;
+  using K = uintE;
   using V = int8_t;
-  using KV = std::tuple<K, V>;
+  using BT = std::tuple<K, V>;
   // using W = typename Graph::weight_type;
   size_t n = G.n;
-  KV empty = std::make_tuple(std::make_pair(UINT_E_MAX, UINT_E_MAX), -1);
+  BT empty = std::make_tuple(UINT_E_MAX, -1);
 
-  auto HH = sparse_table<K, V, hash_pair>(n, empty, hash_pair());
-  auto HL = sparse_table<K, V, hash_pair>(n, empty, hash_pair());
-  auto LH = sparse_table<K, V, hash_pair>(n, empty, hash_pair());
-  auto LL = sparse_table<K, V, hash_pair>(n, empty, hash_pair());
-  auto T  = sparse_table<K, size_t, hash_pair>(n, empty, hash_pair());
+  auto HH = NestHash::nested_table<K, V, hash_vertex>(n, empty, hash_vertex());
+  auto HL = NestHash::nested_table<K, V, hash_vertex>(n, empty, hash_vertex());
+  auto LH = NestHash::nested_table<K, V, hash_vertex>(n, empty, hash_vertex());
+  auto LL = NestHash::nested_table<K, V, hash_vertex>(n, empty, hash_vertex());
+  auto T  = NestHash::nested_table<K, size_t, hash_vertex>(2*n, empty, hash_vertex());
   // auto D  = sequence<size_t>(n);
 
   using E = decltype(HH);
