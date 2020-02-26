@@ -28,6 +28,7 @@
 #include "pbbslib/monoid.h"
 #include "ligra/pbbslib/sparse_table.h"
 #include "ligra/ligra.h"
+#include "two_level_tables.h"
 
 #include "benchmarks/DegeneracyOrder/BarenboimElkin08/DegeneracyOrder.h"
 #include "benchmarks/DegeneracyOrder/GoodrichPszona11/DegeneracyOrder.h"
@@ -56,6 +57,12 @@ struct hash_pair {
   }
 };
 
+struct hash_vertex {
+  inline size_t operator () (const uintE t) {
+    return pbbslib::hash64_2(t);
+  }
+};
+
 
 template <class Graph, class E, class F>
 struct BPDTriangleCountState {
@@ -66,7 +73,7 @@ struct BPDTriangleCountState {
   // initialize tables assuming state.D is already initialized
   // use D to determine the low/high of vertices
   struct updateTablesF {
-    updateTablesF(() {}
+    updateTablesF() {}
 
     inline bool update(uintE s, uintE d) {
     // can add condition s < d and add both edges in one call
@@ -82,12 +89,12 @@ struct BPDTriangleCountState {
     inline bool cond(uintE d) { return cond_true(d); }
   };
 
-  struct updateTF {
-    operator ()(size_t& v0, std::tuple<K, size_t> kv){
-      pbbslib::write_add(v0, std::get<1>(kv));
-    }
+  // struct updateTF {
+  //   void operator ()(size_t& v0, std::tuple<K, size_t> kv){
+  //     pbbslib::write_add(v0, std::get<1>(kv));
+  //   }
 
-  }
+  // }
 
   Graph& G;
   size_t M;
@@ -161,9 +168,9 @@ struct BPDTriangleCountState {
     }
   }
 
-  inline void add_to_T(uintE s, uintE d, size_t V){
-    T.insert_f<updateTF>(newKV(s,d,V), updateTF());
-  }
+  // inline void add_to_T(uintE s, uintE d, size_t V){
+  //   T.insert_f<updateTF>(newKV(s,d,V), updateTF());
+  // }
 
 
 
@@ -227,12 +234,32 @@ inline auto Initialize(Graph& G){
   return state;
 }
 
+template <class Graph>
+inline auto test(Graph& G){
+  using K = uintE;
+  using V = int8_t;
+  using BT = std::tuple<K, V>;
+  // using W = typename Graph::weight_type;
+  size_t n = G.n;
+  BT empty = std::make_tuple(UINT_E_MAX, -1);
+
+  auto HH = NestHash::nested_table<K, V, hash_vertex>(n, empty, hash_vertex());
+  HH.insert(1, 2, 3);
+  auto low = HH.find(1, HH.empty_val);
+  low.insert(make_tuple(3, 4));
+  V v = HH.find(1,3,0);
+  cout << v << endl;
+
+
+}
+
 
 template <class Graph, class F>
 inline size_t Triangle(Graph& G, const F& f, commandLine& P) {
   auto C0 = P.getOptionIntValue("-c", 0);
+  test(G);
 
-  auto state = Initialize<Graph>(G);
+  // auto state = Initialize<Graph>(G);
 
   return C0;
 }
