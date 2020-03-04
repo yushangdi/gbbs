@@ -208,4 +208,111 @@ class nested_table {
 
 };
 
+
+
+template <class K, class BV, class KeyHash>
+class array_table {
+    using BT = std::tuple<K, BV>; // bottom value
+    using V = sparse_table<K, BV, KeyHash>; // top value
+    using T = std::tuple<K, V>; // top key value pair
+
+    public:
+
+        sparse_table<K, BV, KeyHash> *top_table;// array of tables
+        K empty_key;
+        V empty_val = sparse_table<K, BV, KeyHash>();
+        size_t m;
+
+        size_t size(){
+            return m;
+        }
+
+        static void clearA(T* A, long n, T kv) {
+            cout << "clearA not implemented" << endl;
+            exit(1);
+        }
+
+        inline size_t hashToRange(size_t h) { return h;}
+        inline size_t firstIndex(K& k) { return k;}
+        inline size_t incrementIndex(size_t h) { return h;}
+
+        void del() {
+           free(top_table);
+        }
+
+        void resize_no_copy(size_t incoming){
+          cout << "resize not implemented" << endl;
+            exit(1);
+        }
+
+
+        array_table() {
+        }
+
+        // Size is the maximum number of values the hash table will hold.
+        // Overfilling the table could put it into an infinite loop.
+        array_table(size_t _m, BT _empty, KeyHash _key_hash, size_t *_deg, long inp_space_mult=-1)
+        {
+            top_table = pbbslib::new_array_no_init< sparse_table<K,BV,KeyHash>>(_m);
+            par_for(0, _m, pbbslib::kSequentialForThreshold, [&] (size_t i) { 
+                top_table[i] = sparse_table<K,BV,KeyHash>(_deg[i], _empty, _key_hash, inp_space_mult);
+             });
+            empty_key =  std::get<0>(_empty);
+        }
+
+
+        // Pre-condition: k must be present in T.
+        inline size_t idx(K k) {
+           return k;
+        }
+
+        bool insert(K k, K k2, BV v) {
+            BT kv = std::make_tuple(k2, v);
+            return top_table[k].insert(kv);
+        }
+
+        template <class F>
+        bool insert_f(K k, K k2, BV v, const F& f) {
+            BT kv = std::make_tuple(k2, v);
+            return top_table[k].insert_f(kv, f);
+        }
+
+
+        bool insert_seq(K k, K k2, BV v) {
+            BT kv = std::make_tuple(k2, v);
+            return top_table[k].insert_seq(kv);
+        }        
+
+        bool insert_check(std::tuple<K, V> kv, bool* abort) {
+            cout << "insert_check not implemented" << endl;
+            exit(1);
+        }
+
+
+        bool contains(K k) {
+            return k < m;
+        }
+
+        bool contains(K k, K k2) {
+            return top_table[k].contains(k2);
+        }
+
+        BV find(K k, K k2, BV default_value) {
+            if (k >= m) return default_value;
+            return top_table[k].find(k2, default_value);
+        }
+
+        // sequence<T> entries() {//  keys? just pointers?
+        //     cout << "entries() not implemented loop table" << endl;
+        //     exit(1);
+        //     return (sequence<T>)NULL;
+        // }
+
+        void clear() {// memory leak?
+            top_table.clear();
+        }
+
+};
+
+
 }

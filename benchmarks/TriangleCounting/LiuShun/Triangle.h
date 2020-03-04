@@ -69,8 +69,8 @@ struct BPDTriangleCountState {
   using K = uintE;
   using BV = int8_t;
   using BT = std::tuple<K, BV>;
-  using V = sparse_table<K, BV, KeyHash>; // top value
-  using T = std::tuple<K, V>; // top key value pair
+  using V = sparse_table<K, BV, hash_vertex>; // top value
+  // using T = std::tuple<K, V>; // top key value pair
 
   // initialize tables assuming state.D is already initialized
   // use D to determine the low/high of vertices
@@ -91,12 +91,12 @@ struct BPDTriangleCountState {
     inline bool cond(uintE d) { return cond_true(d); }
   };
 
-  // struct updateTF {
-  //   void operator ()(size_t& v0, std::tuple<K, size_t> kv){
-  //     pbbslib::write_add(v0, std::get<1>(kv));
-  //   }
+  struct updateTF {
+    void operator ()(size_t* v0, std::tuple<K, size_t>& kv){
+      pbbslib::write_add(v0, std::get<1>(kv));
+    }
 
-  // }
+  };
 
   Graph& G;
   size_t M;
@@ -133,21 +133,21 @@ struct BPDTriangleCountState {
 
     D = pbbs::sequence<uintE>(n, [&] (size_t i) { return G.get_vertex(i).getOutDegree(); });
     edgeMap(G, Frontier, updateTablesF());
-    for(T kv : HL.entries()){ // loop over keys?
-      K vhigh = std::get<0>(kv);
-      BV table = std::get<1>(kv);
-      for(BT kv2 : table.entries()){
-        K vlow  = std::get<0>(kv2);
-        V table2 = LH.find(vlow, LH.empty_val);
+    // for(T kv : HL.entries()){ // loop over keys?
+    //   K vhigh = std::get<0>(kv);
+    //   BV table = std::get<1>(kv);
+    //   for(BT kv2 : table.entries()){
+    //     K vlow  = std::get<0>(kv2);
+    //     V table2 = LH.find(vlow, LH.empty_val);
 
-        for(BT kv3 : table2.entries()){
-          K vhigh2 = std::get<0>(kv);
-          add_to_T(vhigh, vhigh2, 1);
-          add_to_T(vhigh2, vhigh, 1);
-        }
+    //     for(BT kv3 : table2.entries()){
+    //       K vhigh2 = std::get<0>(kv);
+    //       add_to_T(vhigh, vhigh2, 1);
+    //       add_to_T(vhigh2, vhigh, 1);
+    //     }
 
-      }
-    }
+    //   }
+    // }
   }
 
 
