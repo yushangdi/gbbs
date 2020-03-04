@@ -67,13 +67,14 @@ struct hash_vertex {
 template <class Graph, class E, class F>
 struct BPDTriangleCountState {
   using K = uintE;
-  using BV = int8_t;
+  using BV = int;
   using BT = std::tuple<K, BV>;
   using V = sparse_table<K, BV, hash_vertex>; // top value
   // using T = std::tuple<K, V>; // top key value pair
 
   // initialize tables assuming state.D is already initialized
   // use D to determine the low/high of vertices
+  // update HH, HL, LH, LL
   struct updateTablesF {
     updateTablesF() {}
 
@@ -91,6 +92,7 @@ struct BPDTriangleCountState {
     inline bool cond(uintE d) { return cond_true(d); }
   };
 
+  // update T
   struct updateTF {
     void operator ()(size_t* v0, std::tuple<K, size_t>& kv){
       pbbslib::write_add(v0, std::get<1>(kv));
@@ -109,14 +111,15 @@ struct BPDTriangleCountState {
   E& LL; 
   F& T;
 
-  BPDTriangleCountState(Graph& _G, E _HH, E _HL, E _LH, E _LL, F _T): 
+  BPDTriangleCountState(Graph& _G, E _HH, E _HL, E _LH, E _LL, F _T, pbbs::sequence<uintE> _D): 
     G(_G),
     // D(_D),
     HH(_HH),
     HL(_HL),
     LH(_LH),
     LL(_LL),
-    T(_T){
+    T(_T),
+    D(_D){
 
     size_t n = G.n;
     M  = 2 * G.m + 1;
@@ -131,7 +134,7 @@ struct BPDTriangleCountState {
     vertexSubset Frontier(n,n,frontier.to_array());
     // vertexMap(activeAndCts, init_D_f);
 
-    D = pbbs::sequence<uintE>(n, [&] (size_t i) { return G.get_vertex(i).getOutDegree(); });
+    
     edgeMap(G, Frontier, updateTablesF());
     // for(T kv : HL.entries()){ // loop over keys?
     //   K vhigh = std::get<0>(kv);
@@ -187,26 +190,29 @@ struct BPDTriangleCountState {
 };
 
 
+
+
 template <class Graph>
 inline auto Initialize(Graph& G){
   using K = uintE;
-  using V = int8_t;
+  using V = int;
   using BT = std::tuple<K, V>;
   // using W = typename Graph::weight_type;
   size_t n = G.n;
   BT empty = std::make_tuple(UINT_E_MAX, -1);
 
-  auto HH = NestHash::nested_table<K, V, hash_vertex>(n, empty, hash_vertex());
-  auto HL = NestHash::nested_table<K, V, hash_vertex>(n, empty, hash_vertex());
-  auto LH = NestHash::nested_table<K, V, hash_vertex>(n, empty, hash_vertex());
-  auto LL = NestHash::nested_table<K, V, hash_vertex>(n, empty, hash_vertex());
-  auto T  = NestHash::nested_table<K, size_t, hash_vertex>(2*n, empty, hash_vertex());
-  // auto D  = sequence<size_t>(n);
+  pbbs::sequence<uintE> D = pbbs::sequence<uintE>(n, [&] (size_t i) { return G.get_vertex(i).getOutDegree(); });
+  auto HH = NestHash::array_table<K, V, hash_vertex>(n, empty, hash_vertex(), D.begin());
+  auto HL = NestHash::array_table<K, V, hash_vertex>(n, empty, hash_vertex(), D.begin());
+  auto LH = NestHash::array_table<K, V, hash_vertex>(n, empty, hash_vertex(), D.begin());
+  auto LL = NestHash::array_table<K, V, hash_vertex>(n, empty, hash_vertex(), D.begin());
+  auto T  = NestHash::array_table<K, size_t, hash_vertex>(2*n, empty, hash_vertex(), D.begin());
+  // what to initialize?
 
   using E = decltype(HH);
   using F = decltype(T);
   
-  auto state = BPDTriangleCountState<Graph, E, F>(G, HH, HL, LH, LL, T);
+  auto state = BPDTriangleCountState<Graph, E, F>(G, HH, HL, LH, LL, T, D);
 
   return state;
 }
@@ -214,7 +220,7 @@ inline auto Initialize(Graph& G){
 template <class Graph>
 inline auto test(Graph& G){
   using K = uintE;
-  using V = int8_t;
+  using V = int;
   using BT = std::tuple<K, V>;
   // using W = typename Graph::weight_type;
   size_t n = G.n;
@@ -245,3 +251,28 @@ inline size_t Triangle(Graph& G, const F& f, commandLine& P) {
 
   return C0;
 }
+
+
+// template <class Graph>
+// inline auto Initialize(Graph& G){
+//   using K = uintE;
+//   using V = int;
+//   using BT = std::tuple<K, V>;
+//   // using W = typename Graph::weight_type;
+//   size_t n = G.n;
+//   BT empty = std::make_tuple(UINT_E_MAX, -1);
+
+//   auto HH = NestHash::nested_table<K, V, hash_vertex>(n, empty, hash_vertex());
+//   auto HL = NestHash::nested_table<K, V, hash_vertex>(n, empty, hash_vertex());
+//   auto LH = NestHash::nested_table<K, V, hash_vertex>(n, empty, hash_vertex());
+//   auto LL = NestHash::nested_table<K, V, hash_vertex>(n, empty, hash_vertex());
+//   auto T  = NestHash::nested_table<K, size_t, hash_vertex>(2*n, empty, hash_vertex());
+//   // auto D  = sequence<size_t>(n);
+
+//   using E = decltype(HH);
+//   using F = decltype(T);
+  
+//   auto state = BPDTriangleCountState<Graph, E, F>(G, HH, HL, LH, LL, T);
+
+//   return state;
+// }
